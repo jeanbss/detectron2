@@ -50,9 +50,7 @@ class EventWriter:
 class JSONWriter(EventWriter):
     """
     Write scalars to a json file.
-
     It saves scalars as one json per line (instead of a big json) for easy parsing.
-
     Examples parsing such a json file:
     ::
         $ cat metrics.json | jq -s '.[0:2]'
@@ -82,13 +80,11 @@ class JSONWriter(EventWriter):
             "time": 0.2490077018737793
           }
         ]
-
         $ cat metrics.json | jq '.loss_mask'
         0.7126231789588928
         0.689423680305481
         0.6776131987571716
         ...
-
     """
 
     def __init__(self, json_file, window_size=20):
@@ -138,18 +134,13 @@ class TensorboardXWriter(EventWriter):
         Args:
             log_dir (str): the directory to save the output events
             window_size (int): the scalars will be median-smoothed by this window size
-
             kwargs: other arguments passed to `torch.utils.tensorboard.SummaryWriter(...)`
         """
         self._window_size = window_size
-        self._writer_args = {"log_dir": log_dir, **kwargs}
-        self._last_write = -1
-
-    @cached_property
-    def _writer(self):
         from torch.utils.tensorboard import SummaryWriter
 
-        return SummaryWriter(**self._writer_args)
+        self._writer = SummaryWriter(log_dir, **kwargs)
+        self._last_write = -1
 
     def write(self):
         storage = get_event_storage()
@@ -178,7 +169,7 @@ class TensorboardXWriter(EventWriter):
             storage.clear_histograms()
 
     def close(self):
-        if "_writer" in self.__dict__:
+        if hasattr(self, "_writer"):  # doesn't exist when the code fails at import
             self._writer.close()
 
 
@@ -187,7 +178,6 @@ class CommonMetricPrinter(EventWriter):
     Print **common** metrics to the terminal, including
     iteration time, ETA, memory, all losses, and the learning rate.
     It also applies smoothing using a window of 20 elements.
-
     It's meant to print common metrics in common ways.
     To print something in more customized ways, please implement a similar printer by yourself.
     """
@@ -307,7 +297,6 @@ class CommonMetricPrinter(EventWriter):
 class EventStorage:
     """
     The user-facing class that provides metric storage functionalities.
-
     In the future we may add support for storing / logging other types of data if needed.
     """
 
@@ -328,7 +317,6 @@ class EventStorage:
         """
         Add an `img_tensor` associated with `img_name`, to be shown on
         tensorboard.
-
         Args:
             img_name (str): The name of the image to put into tensorboard.
             img_tensor (torch.Tensor or numpy.array): An `uint8` or `float`
@@ -342,13 +330,11 @@ class EventStorage:
     def put_scalar(self, name, value, smoothing_hint=True):
         """
         Add a scalar `value` to the `HistoryBuffer` associated with `name`.
-
         Args:
             smoothing_hint (bool): a 'hint' on whether this scalar is noisy and should be
                 smoothed when logged. The hint will be accessible through
                 :meth:`EventStorage.smoothing_hints`.  A writer may ignore the hint
                 and apply custom smoothing rule.
-
                 It defaults to True because most scalars we save need to be smoothed to
                 provide any useful signal.
         """
@@ -369,9 +355,7 @@ class EventStorage:
     def put_scalars(self, *, smoothing_hint=True, **kwargs):
         """
         Put multiple scalars from keyword arguments.
-
         Examples:
-
             storage.put_scalars(loss=my_loss, accuracy=my_accuracy, smoothing_hint=True)
         """
         for k, v in kwargs.items():
@@ -380,7 +364,6 @@ class EventStorage:
     def put_histogram(self, hist_name, hist_tensor, bins=1000):
         """
         Create a histogram from a tensor.
-
         Args:
             hist_name (str): The name of the histogram to put into tensorboard.
             hist_tensor (torch.Tensor): A Tensor of arbitrary shape to be converted
@@ -438,9 +421,7 @@ class EventStorage:
         are either the un-smoothed original latest value,
         or a median of the given window_size,
         depend on whether the smoothing_hint is True.
-
         This provides a default behavior that other writers can use.
-
         Note: All scalars saved in the past `window_size` iterations are used for smoothing.
         This is different from the `window_size` definition in HistoryBuffer.
         Use :meth:`get_history_window_size` to get the `window_size` used in HistoryBuffer.
@@ -480,7 +461,6 @@ class EventStorage:
         """
         User should either: (1) Call this function to increment storage.iter when needed. Or
         (2) Set `storage.iter` to the correct iteration number before each iteration.
-
         The storage will then be able to associate the new data with an iteration number.
         """
         self._iter += 1
