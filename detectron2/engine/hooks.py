@@ -162,7 +162,7 @@ class PeriodicWriter(HookBase):
     Note that ``period`` does not affect how data is smoothed by each writer.
     """
 
-    def __init__(self, writers, period=50):
+    def __init__(self, writers, period=20):
         """
         Args:
             writers (list[EventWriter]): a list of EventWriter objects
